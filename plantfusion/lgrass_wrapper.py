@@ -18,8 +18,6 @@ import lgrass
 import time
 import pandas as pd
 
-
-
 from plantfusion.utils import create_child_folder
 from plantfusion.light_wrapper import Light_wrapper
 from plantfusion.indexer import Indexer
@@ -28,17 +26,15 @@ from plantfusion.indexer import Indexer
 class Simpraise_wrapper:
     """Wrapper for Simpraise model
 
-    construction creates the lsystem
-
-    
-
+    Constructor creates the lsysrem
     """
 
     def __init__(
         self,
         name="simpraise",
         indexer=Indexer(),
-        in_folder="",
+        in_folder="inputs",
+        genet_folder="modelgenet",
         out_folder=None,
         plan_sim_file=None,
         genet_file = None,# Fichiers d'entrée
@@ -64,7 +60,7 @@ class Simpraise_wrapper:
         # Config des fichiers d'entrée
         self.INPUTS_DIRPATH = in_folder
         src = os.path.join(self.INPUTS_DIRPATH, 'insim.txt')
-        dst = 'inputs_lgrass\\modelgenet'
+        dst = genet_folder
         exe = 'simpraise.exe'
 
         # Génération des fondateurs, première exécution du modèle génétique
@@ -73,7 +69,7 @@ class Simpraise_wrapper:
         # Répertoires de lecture/écriture
         #INPUTS_DIRPATH = 'inputs'
         self.OUTPUTS_DIRPATH = 'outputs'
-        GENET_DIRPATH = 'inputs_lgrass'
+        GENET_DIRPATH = genet_folder
 
         # Charger le plan de simulation et le lsystem
         row = plan_sim.iloc[id_scenario]
@@ -89,7 +85,7 @@ class Simpraise_wrapper:
             in_genet_file = os.path.join(GENET_DIRPATH, genet_file)
         else:
             in_genet_file = None
-        in_param_file = os.path.join('inputs_lgrass', param_plant_file)
+        in_param_file = os.path.join(in_folder, param_plant_file)
         
         # Parametres des plantes
         self.lsystem.ParamP, self.lsystem.nb_plantes, self.lsystem.NBlignes, self.lsystem.NBcolonnes, self.lsystem.posPlante, self.lsystem.Plantes, self.lsystem.Genotypes, self.lsystem.flowering_model = prf.define_param(
@@ -120,14 +116,12 @@ class Simpraise_wrapper:
             self.lsystem.cutting_dates = []
 
         # Initialisation des parametres de caribu
-        dico_caribu = run_caribu_lgrass.init(path_param='inputs_lgrass', in_file='param_caribu.csv', meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=row)
+        dico_caribu = run_caribu_lgrass.init(path_param=in_folder, in_file='param_caribu.csv', meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=row)
         
         # Rédaction d'un fichier de sortie
         path_out = os.path.join(self.OUTPUTS_DIRPATH, name + '_caribu.csv')
         output = open(path_out, 'w')
         output.write("GDD;Date;Day;nb_talles;biomasse_aerienne;surface_foliaire;lstring" + "\n")
-
-        print(os.getcwd())
 
 
 
