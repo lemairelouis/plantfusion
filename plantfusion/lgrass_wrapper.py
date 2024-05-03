@@ -73,6 +73,7 @@ class Simpraise_wrapper:
 
         # Charger le plan de simulation et le lsystem
         row = plan_sim.iloc[id_scenario]
+        self.row = row
         name = str(row["name"])
         self.lpy_filename = os.path.join(lgrass.__path__[0], 'lgrass.lpy')
         self.lsystem = lpy.Lsystem(self.lpy_filename)
@@ -116,7 +117,7 @@ class Simpraise_wrapper:
             self.lsystem.cutting_dates = []
 
         # Initialisation des parametres de caribu
-        dico_caribu = run_caribu_lgrass.init(path_param=in_folder, in_file='param_caribu.csv', meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=row)
+        self.dico_caribu = run_caribu_lgrass.init(path_param=in_folder, in_file='param_caribu.csv', meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=row)
         
         # Rédaction d'un fichier de sortie
         path_out = os.path.join(self.OUTPUTS_DIRPATH, name + '_caribu.csv')
@@ -127,36 +128,19 @@ class Simpraise_wrapper:
 
     def derive(self, t):
         self.lstring = self.lsystem.derive(self.lstring, t, 1)
-        
-
-        
-
 
 
     def light_inputs(self, elements="triangles"):
         if elements == "triangles":
-            return self.lsystem.sceneInterpretation(self.lstring)
+            self.lscene = self.lsystem.sceneInterpretation(self.lstring)
+            return self.lscene
 
         else:
             print("Unknown light model")
             raise
 
-    def light_results(self, lstring, current_day, res, dico_caribu) -> None:
-
-        # Application de caribu spécifique à lgrass
-        timing_method1 = time()
-        print('temps d exec de caribu:', time() - timing_method1)
-        for ide, v in res['Ei'].items():
-            dico_caribu['Ray'][lstring[ide][0].id_plante] += (
-                    v * (res['area'][ide]))  # v: MJ m-2, area: m2(auto-converted), Ray: MJ PAR
-            id_plante = lstring[ide][0].id_plante
-            id_talle = lstring[ide][0].id_talle
-            area = res['area'][ide]
-            dico_caribu['radiation_interception'] = dico_caribu['radiation_interception'].append(pd.DataFrame(
-                {'id_plante': [id_plante], 'id_talle': [id_talle], 'date': [current_day],
-                'organ': lstring[ide].name, 'Ei': [v], 'area': [area]}))
-
-        return dico_caribu
+    def light_results(self) -> None:
+        return
         
 
 
@@ -165,7 +149,7 @@ class Simpraise_wrapper:
         
         
         self.lsystem.BiomProd, self.dico_caribu['radiation_interception'], self.dico_caribu[
-            'Ray'] = run_caribu_lgrass.runcaribu(self.lsystem.lstring, Simpraise_wrapper.lscene, self.lsystem.current_day,
+            'Ray'] = run_caribu_lgrass.runcaribu(self.lstring, self.lscene, self.lsystem.current_day,
                                                     self.lsystem.tiller_appearance,
                                                     self.lsystem.nb_plantes, self.dico_caribu)
         for ID in range(self.lsystem.nb_plantes):
@@ -175,7 +159,7 @@ class Simpraise_wrapper:
     def end(self):
         # Matrice de croisement des plantes
         if self.opt_repro != "False":
-            mat = prf.create_seeds(self.lsystem.lstring, self.lsystem.lsystem.nb_plantes, self.opt_repro, self.row["cutting_freq"], self.lsystem.ParamP)
+            mat = prf.create_seeds(self.lstring, self.lsystem.nb_plantes, self.opt_repro, self.row["cutting_freq"], self.lsystem.ParamP)
             np.savetxt(os.path.join(self.OUTPUTS_DIRPATH, self.name + "_mat.csv"), mat)
         else:
             mat = 0
